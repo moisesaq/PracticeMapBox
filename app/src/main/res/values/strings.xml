@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">PracticeMapBox</string>
+    <string name="action_settings">Settings</string>
+    <string name="accessTokenMapBox">pk.eyJ1IjoibW9pc2VzMDciLCJhIjoiY2luMjNjZWMzMGI5MnY3a2tkZ25udHJoMCJ9.SSZYVKUPTtwPZmolPq0xNw</string>
+</resources>
