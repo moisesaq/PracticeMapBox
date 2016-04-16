@@ -12,5 +12,9 @@
         android:id="@+id/mapBoxTechno"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        mapbox:access_token="@string/accessTokenMapBox"/>
+        mapbox:access_token="@string/accessTokenMapBox" />
+
+    <!--mapbox:center_latitude="-34.603633"
+    mapbox:center_longitude="-58.380809"
+    mapbox:zoom="11"-->
 </FrameLayout>
