@@ -49,7 +49,7 @@ public class MainActivity extends AppCompatActivity {
                 CameraPosition cameraPosition = new CameraPosition.Builder()
                         .target(new LatLng(latitudeDefault, longitudeDefault)) // set the camera's center position
                         .zoom(12)  // set the camera's zoom level
-                        .tilt(20)  // set the camera's tilt
+                        .tilt(45)  // set the camera's tilt
                         .build();
 
                 // Move the camera to that position
