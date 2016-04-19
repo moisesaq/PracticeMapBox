@@ -4,8 +4,17 @@
     tools:context=".MainActivity">
 
     <item
+        android:id="@+id/action_search"
+        android:title="@string/search"
+        android:orderInCategory="1"
+        android:icon="@mipmap/ic_action_search"
+        app:actionViewClass="android.support.v7.widget.SearchView"
+        app:showAsAction="ifRoom|collapseActionView"/>
+
+    <item
         android:id="@+id/action_current_location"
         android:title="@string/current_location"
-        android:orderInCategory="1"
+        android:orderInCategory="2"
         app:showAsAction="never"/>
+
 </menu>
