@@ -135,7 +135,7 @@ public class MainActivity extends AppCompatActivity implements android.location.
 
             CameraPosition cameraPosition = new CameraPosition.Builder()
                     .target(new LatLng(location.getLatitude(), location.getLongitude())) // set the camera's center position
-                    .zoom(12)  // set the camera's zoom level
+                    .zoom(15)  // set the camera's zoom level
                     .tilt(45)  // set the camera's tilt
                     .build();
 
