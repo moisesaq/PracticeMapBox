@@ -23,4 +23,11 @@
         android:orderInCategory="3"
         app:showAsAction="never"/>
 
+    <item
+        android:id="@+id/action_remove_markers"
+        android:title="@string/remove"
+        android:orderInCategory="4"
+        android:icon="@mipmap/ic_delete"
+        app:showAsAction="ifRoom|withText"/>
+
 </menu>

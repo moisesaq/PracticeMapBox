@@ -34,6 +34,7 @@ import com.mapbox.geocoder.android.AndroidGeocoder;
 import com.mapbox.geocoder.service.models.GeocoderFeature;
 import com.mapbox.mapboxsdk.annotations.Icon;
 import com.mapbox.mapboxsdk.annotations.IconFactory;
+import com.mapbox.mapboxsdk.annotations.Marker;
 import com.mapbox.mapboxsdk.annotations.MarkerOptions;
 import com.mapbox.mapboxsdk.camera.CameraPosition;
 import com.mapbox.mapboxsdk.camera.CameraUpdateFactory;
@@ -47,7 +48,7 @@ import java.util.List;
 import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity implements android.location.LocationListener, MapboxMap.OnMapClickListener,
-                                                                    View.OnClickListener{
+                                                                    View.OnClickListener, MapboxMap.OnMapLongClickListener, MapboxMap.OnMarkerClickListener{
 
     public static final String MAPBOX_ACCESS_TOKEN = "pk.eyJ1IjoibW9pc2VzMDciLCJhIjoiY2luMjNjZWMzMGI5MnY3a2tkZ25udHJoMCJ9.SSZYVKUPTtwPZmolPq0xNw";
     private double latitudeDefault = -34.603633;
@@ -61,6 +62,11 @@ public class MainActivity extends AppCompatActivity implements android.location.
 
     private AutoCompleteTextView actvSearchDirection;
     private Button btnSearch;
+
+    public static long ID_ORIGIN_MARKER = 1000;
+    public static long ID_DESTINATION_MARKER = 2000;
+    private Marker originMarker, destinationMarker;
+    private MarkerOptions originMarkerOptions, destinationMarkerOptions;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -76,9 +82,12 @@ public class MainActivity extends AppCompatActivity implements android.location.
                 // Set map style
                 mainMapBoxMap = mapboxMap;
                 //mainMapBoxMap.setOnMapClickListener(MainActivity.this);
-                mapboxMap.setStyleUrl(Style.MAPBOX_STREETS);
+                mainMapBoxMap.setOnMapLongClickListener(MainActivity.this);
+                mainMapBoxMap.setOnMarkerClickListener(MainActivity.this);
+                mapboxMap.setStyleUrl(Style.DARK);
 
                 // Set the camera's starting position
+
                 CameraPosition cameraPosition = new CameraPosition.Builder()
                         .target(new LatLng(latitudeDefault, longitudeDefault)) // set the camera's center position
                         .zoom(12)  // set the camera's zoom level
@@ -171,6 +180,9 @@ public class MainActivity extends AppCompatActivity implements android.location.
             case R.id.action_current_direction:
                 //new SearchDirection().execute();
                 searchCurrentDirection();
+                return true;
+            case R.id.action_remove_markers:
+                removeMarkers();
                 return true;
         }
         return super.onOptionsItemSelected(item);
@@ -270,11 +282,75 @@ public class MainActivity extends AppCompatActivity implements android.location.
 
     @Override
     public void onMapClick(@NonNull LatLng point) {
-        this.mainMapBoxMap.addMarker(new MarkerOptions()
-                .position(point)//new LatLng(location.getLatitude(), location.getLongitude()))
-                .title("New position!")
-                .snippet("Latitude: " + point.getLatitude() + " Longitude: " + point.getLongitude())
-                .icon(getCustomIcon(R.mipmap.tool)));
+    }
+
+    private void removeMarkers(){
+        if(originMarker != null){
+            originMarker.hideInfoWindow();
+            originMarker.remove();
+        }
+
+        originMarker = null;
+        originMarkerOptions = null;
+
+        if(destinationMarker != null){
+            destinationMarker.hideInfoWindow();
+            destinationMarker.remove();
+        }
+
+        destinationMarker = null;
+        destinationMarkerOptions = null;
+    }
+
+    @Override
+    public void onMapLongClick(@NonNull LatLng point) {
+        try{
+            if(point != null){
+                if(originMarkerOptions == null){
+                    createOriginMarker(point);
+                    this.mainMapBoxMap.addMarker(originMarkerOptions);
+                }else if(destinationMarkerOptions == null){
+                    createDestinationMarker(point);
+                    this.mainMapBoxMap.addMarker(destinationMarkerOptions);
+                }
+            }else{
+                Toast.makeText(MainActivity.this, "Again", Toast.LENGTH_SHORT).show();
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+
+    private void createOriginMarker(LatLng point){
+        originMarkerOptions = new MarkerOptions();
+        originMarkerOptions.position(point);
+        originMarkerOptions.title("Origin");
+        originMarkerOptions.snippet("Latitude: " + point.getLatitude() + " Longitude: " + point.getLongitude());
+        originMarkerOptions.icon(getCustomIcon(R.mipmap.marker_origin));
+
+        originMarker = originMarkerOptions.getMarker();
+        originMarker.setId(ID_ORIGIN_MARKER);
+    }
+
+    private void createDestinationMarker(LatLng point){
+        destinationMarkerOptions = new MarkerOptions();
+        destinationMarkerOptions.position(point);
+        destinationMarkerOptions.title("Destination");
+        destinationMarkerOptions.snippet("Latitude: " + point.getLatitude() + " Longitude: " + point.getLongitude());
+        destinationMarkerOptions.icon(getCustomIcon(R.mipmap.marker_destination));
+
+        destinationMarker = destinationMarkerOptions.getMarker();
+        destinationMarker.setId(ID_DESTINATION_MARKER);
+    }
+
+    @Override
+    public boolean onMarkerClick(@NonNull Marker marker) {
+        if(marker.getId() == ID_ORIGIN_MARKER){
+            Toast.makeText(MainActivity.this, "Origin", Toast.LENGTH_SHORT).show();
+        }else if(marker.getId() == ID_DESTINATION_MARKER){
+            Toast.makeText(MainActivity.this, "Destination", Toast.LENGTH_SHORT).show();
+        }
+        return false;
     }
 
     public class SearchAddress extends AsyncTask<String, Void, List<Address>>{
