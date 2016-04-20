@@ -32,4 +32,7 @@ dependencies {
     compile ('com.mapbox.mapboxsdk:mapbox-android-sdk:4.0.0@aar'){
         transitive=true
     }
+    compile ('com.mapbox.mapboxsdk:mapbox-android-geocoder:1.0.0@aar'){
+        transitive=true
+    }
 }
