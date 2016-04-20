@@ -237,7 +237,7 @@ public class MainActivity extends AppCompatActivity implements android.location.
         Address address = null;
         double latitude = latitudeDefault;
         double longitude = longitudeDefault;
-        if(location == null){
+        if(location != null){
             latitude = location.getLatitude();
             longitude = location.getLongitude();
         }
@@ -255,7 +255,7 @@ public class MainActivity extends AppCompatActivity implements android.location.
     private void showCurrentDirection(Address address){
         AlertDialog.Builder dialog = new AlertDialog.Builder(MainActivity.this);
         dialog.setTitle(getString(R.string.you_are));
-        String result = "";
+        /*String result = "";
         if(address.getLocality() != null)
             result += address.getLocality() + " - ";
         if(address.getAdminArea() != null)
@@ -263,8 +263,8 @@ public class MainActivity extends AppCompatActivity implements android.location.
         if(address.getCountryCode() != null)
             result += address.getCountryName() + " - ";
         if(address.getAddressLine(0) != null)
-            result += address.getAddressLine(0);
-        dialog.setMessage(result);
+            result += address.getAddressLine(0);*/
+        dialog.setMessage(address.toString());
         dialog.create().show();
     }
 
@@ -370,7 +370,7 @@ public class MainActivity extends AppCompatActivity implements android.location.
             Address address = null;
             double latitude = latitudeDefault;
             double longitude = longitudeDefault;
-            if(location == null){
+            if(location != null){
                 latitude = location.getLatitude();
                 longitude = location.getLongitude();
             }
