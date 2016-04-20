@@ -18,4 +18,30 @@
     <!--mapbox:center_latitude="-34.603633"
     mapbox:center_longitude="-58.380809"
     mapbox:zoom="11"-->
+
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingTop="3dp"
+        android:paddingRight="5dp"
+        android:paddingLeft="5dp"
+        android:gravity="center_vertical"
+        android:layout_gravity="center_horizontal|top">
+
+        <AutoCompleteTextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Obelisco"
+            android:id="@+id/actvSearchDirection"
+            android:layout_weight="1" />
+
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Search"
+            android:id="@+id/btnSearch" />
+    </LinearLayout>
+
+
 </FrameLayout>

@@ -14,9 +14,7 @@ import android.widget.TextView;
 
 import java.util.List;
 
-/**
- * Created by moises on 20/04/16.
- */
+
 public class DialogListAddresses extends DialogFragment{
 
     public MainActivity mainActivity;
@@ -24,6 +22,10 @@ public class DialogListAddresses extends DialogFragment{
     private ListView listAddresses;
     private ArrayAdapter<Address> adapter;
     private List<Address> list;
+
+    public DialogListAddresses(){
+
+    }
 
     public DialogListAddresses(MainActivity mainActivity, List<Address> list){
         this.mainActivity = mainActivity;
@@ -39,9 +41,11 @@ public class DialogListAddresses extends DialogFragment{
         View view = inflater.inflate(R.layout.list_addresses, null);
         if(list.size() == 0){
             empty = (TextView)view.findViewById(R.id.empty);
+            empty.setVisibility(View.VISIBLE);
             empty.setText(getResources().getString(R.string.not_found_data));
         }else{
             listAddresses = (ListView)view.findViewById(R.id.listAddresses);
+            listAddresses.setVisibility(View.VISIBLE);
             adapter = new ArrayAdapter<>(getActivity(), android.R.layout.simple_list_item_1, list);
             listAddresses.setAdapter(adapter);
         }

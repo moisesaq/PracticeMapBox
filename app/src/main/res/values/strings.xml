@@ -6,4 +6,9 @@
     <string name="search">Search</string>
     <string name="wanted_find">He wanted to find</string>
     <string name="not_found_data">Not found data</string>
+    <string name="loading">Loading...</string>
+    <string name="searching">Searching...</string>
+    <string name="your_direction">Your direction</string>
+    <string name="you_are">You are in...</string>
+    <string name="search_current_direction">Search current direction</string>
 </resources>

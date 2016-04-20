@@ -17,4 +17,10 @@
         android:orderInCategory="2"
         app:showAsAction="never"/>
 
+    <item
+        android:id="@+id/action_current_direction"
+        android:title="@string/search_current_direction"
+        android:orderInCategory="3"
+        app:showAsAction="never"/>
+
 </menu>
