@@ -1,6 +1,7 @@
 package com.technorides.practicemapbox;
 
 import android.Manifest;
+import android.app.SearchManager;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.graphics.drawable.Drawable;
@@ -12,7 +13,9 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
+import android.support.v4.view.MenuItemCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.SearchView;
 import android.support.v7.widget.Toolbar;
 import android.view.View;
 import android.view.Menu;
@@ -35,6 +38,7 @@ public class MainActivity extends AppCompatActivity implements android.location.
     private double latitudeDefault = -34.603633;
     private double longitudeDefault = -58.380809;
     private FrameLayout mainContainer;
+    private Toolbar toolbar;
     private MapView mapView;
     private LocationManager locationManager;
     private Location location;
@@ -44,7 +48,7 @@ public class MainActivity extends AppCompatActivity implements android.location.
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         mainContainer = (FrameLayout) findViewById(R.id.containerMain);
 
@@ -54,12 +58,6 @@ public class MainActivity extends AppCompatActivity implements android.location.
         mapView.getMapAsync(new OnMapReadyCallback() {
             @Override
             public void onMapReady(MapboxMap mapboxMap) {
-                /*mapboxMap.setOnMapClickListener(new MapboxMap.OnMapClickListener() {
-                    @Override
-                    public void onMapClick(LatLng point) {
-
-                    }
-                });*/
                 // Set map style
                 mainMapBoxMap = mapboxMap;
                 mainMapBoxMap.setOnMapClickListener(MainActivity.this);
@@ -110,9 +108,14 @@ public class MainActivity extends AppCompatActivity implements android.location.
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_main, menu);
-        return true;
+        MenuItem searchItem = menu.findItem(R.id.action_search);
+        SearchManager searchManager = (SearchManager)getSystemService(Context.SEARCH_SERVICE);
+        SearchView searchView = (SearchView)MenuItemCompat.getActionView(searchItem);
+        if(searchView != null)
+            searchView.setSearchableInfo(searchManager.getSearchableInfo(getComponentName()));
+        //searchItem.collapseActionView();
+        return super.onCreateOptionsMenu(menu);
     }
 
     @Override
@@ -129,12 +132,11 @@ public class MainActivity extends AppCompatActivity implements android.location.
     private void showCurrentLocation(){
         try{
             if(locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) && location != null){
-
                 this.mainMapBoxMap.addMarker(new MarkerOptions()
                         .position(new LatLng(location.getLatitude(), location.getLongitude()))
                         .title("I'm here!")
                         .snippet("Welcome Moises")
-                        .icon(getCUstomIcon(R.mipmap.ic_details_pinpickup)));
+                        .icon(getCustomIcon(R.mipmap.ic_details_pinpickup)));
 
                 CameraPosition cameraPosition = new CameraPosition.Builder()
                         .target(new LatLng(location.getLatitude(), location.getLongitude())) // set the camera's center position
@@ -147,15 +149,12 @@ public class MainActivity extends AppCompatActivity implements android.location.
 
                 Snackbar.make(mainContainer, "Latitude: " + location.getLatitude() + "Longitude: " + location.getLongitude(), Snackbar.LENGTH_LONG)
                         .setAction("Action", null)
-                        .setActionTextColor(getResources().getColor(R.color.colorAccent)).
-                        show();
+                        .show();
             }else{
                 Snackbar.make(mainContainer, "GPS DISABLED", Snackbar.LENGTH_LONG)
                         .setAction("Action", null)
-                        .setActionTextColor(getResources().getColor(R.color.colorAccent)).
-                        show();
+                        .show();
             }
-
         }catch (Exception e){
             e.printStackTrace();
         }
@@ -218,13 +217,14 @@ public class MainActivity extends AppCompatActivity implements android.location.
                 .position(new LatLng(location.getLatitude(), location.getLongitude()))
                 .title("New position!")
                 .snippet("Latitude: " + point.getAltitude() + " Longitude: " + point.getLongitude())
-                .icon(getCUstomIcon(R.mipmap.pin)));
+                .icon(getCustomIcon(R.mipmap.pin)));
     }
 
-    private Icon getCUstomIcon(int icon_drawable){
+    private Icon getCustomIcon(int icon_drawable){
         IconFactory iconFactory = IconFactory.getInstance(this);
         Drawable iconDrawable = ContextCompat.getDrawable(this, icon_drawable);
         Icon icon = iconFactory.fromDrawable(iconDrawable);
         return icon;
     }
+
 }
