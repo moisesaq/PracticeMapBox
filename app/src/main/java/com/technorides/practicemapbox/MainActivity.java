@@ -5,8 +5,10 @@ import android.app.SearchManager;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.graphics.drawable.Drawable;
+import android.location.Address;
 import android.location.Location;
 import android.location.LocationManager;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
@@ -21,7 +23,9 @@ import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.FrameLayout;
+import android.widget.Toast;
 
+import com.mapbox.geocoder.android.AndroidGeocoder;
 import com.mapbox.mapboxsdk.annotations.Icon;
 import com.mapbox.mapboxsdk.annotations.IconFactory;
 import com.mapbox.mapboxsdk.annotations.MarkerOptions;
@@ -33,8 +37,12 @@ import com.mapbox.mapboxsdk.maps.MapView;
 import com.mapbox.mapboxsdk.maps.MapboxMap;
 import com.mapbox.mapboxsdk.maps.OnMapReadyCallback;
 
+import java.util.List;
+import java.util.Locale;
+
 public class MainActivity extends AppCompatActivity implements android.location.LocationListener, MapboxMap.OnMapClickListener {
 
+    public static final String MAPBOX_ACCESS_TOKEN = "pk.eyJ1IjoibW9pc2VzMDciLCJhIjoiY2luMjNjZWMzMGI5MnY3a2tkZ25udHJoMCJ9.SSZYVKUPTtwPZmolPq0xNw";
     private double latitudeDefault = -34.603633;
     private double longitudeDefault = -58.380809;
     private FrameLayout mainContainer;
@@ -60,7 +68,7 @@ public class MainActivity extends AppCompatActivity implements android.location.
             public void onMapReady(MapboxMap mapboxMap) {
                 // Set map style
                 mainMapBoxMap = mapboxMap;
-                mainMapBoxMap.setOnMapClickListener(MainActivity.this);
+                //mainMapBoxMap.setOnMapClickListener(MainActivity.this);
                 mapboxMap.setStyleUrl(Style.MAPBOX_STREETS);
 
                 // Set the camera's starting position
@@ -112,9 +120,22 @@ public class MainActivity extends AppCompatActivity implements android.location.
         MenuItem searchItem = menu.findItem(R.id.action_search);
         SearchManager searchManager = (SearchManager)getSystemService(Context.SEARCH_SERVICE);
         SearchView searchView = (SearchView)MenuItemCompat.getActionView(searchItem);
-        if(searchView != null)
+        if(searchView != null){
             searchView.setSearchableInfo(searchManager.getSearchableInfo(getComponentName()));
-        //searchItem.collapseActionView();
+            searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+                @Override
+                public boolean onQueryTextSubmit(String query) {
+                    Toast.makeText(getApplicationContext(), "Searching " + query, Toast.LENGTH_LONG).show();
+                    searchAddress(query);
+                    return false;
+                }
+
+                @Override
+                public boolean onQueryTextChange(String newText) {
+                    return false;
+                }
+            });
+        }
         return super.onCreateOptionsMenu(menu);
     }
 
@@ -162,6 +183,48 @@ public class MainActivity extends AppCompatActivity implements android.location.
     }
 
     @Override
+    public void onMapClick(@NonNull LatLng point) {
+        this.mainMapBoxMap.addMarker(new MarkerOptions()
+                .position(new LatLng(location.getLatitude(), location.getLongitude()))
+                .title("New position!")
+                .snippet("Latitude: " + point.getLatitude() + " Longitude: " + point.getLongitude())
+                .icon(getCustomIcon(R.mipmap.tool)));
+    }
+
+    private void searchAddress(String textAddress){
+        double latitude = latitudeDefault;
+        double longitude = longitudeDefault;
+        if(location == null){
+            latitude = location.getLatitude();
+            longitude = location.getLongitude();
+        }
+
+        final double lLat = latitude - 1;
+        final double rLat = latitude + 1;
+        final double lLong = longitude - 1;
+        final double rLong = longitude + 1;
+        AndroidGeocoder geocoder = new AndroidGeocoder(getApplicationContext(), Locale.getDefault());
+        geocoder.setAccessToken(MAPBOX_ACCESS_TOKEN);
+        try{
+            List<Address> addressList = geocoder.getFromLocationName(textAddress, 100, lLat, lLong, rLat, rLong);
+            //new AsyncTask<>()
+            DialogListAddresses dialogListAddresses = new DialogListAddresses(this, addressList);
+            dialogListAddresses.show(getSupportFragmentManager(), "tagList");
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+
+
+    }
+
+    private Icon getCustomIcon(int icon_drawable){
+        IconFactory iconFactory = IconFactory.getInstance(this);
+        Drawable iconDrawable = ContextCompat.getDrawable(this, icon_drawable);
+        Icon icon = iconFactory.fromDrawable(iconDrawable);
+        return icon;
+    }
+
+    @Override
     public void onResume(){
         super.onResume();
         mapView.onResume();
@@ -191,6 +254,7 @@ public class MainActivity extends AppCompatActivity implements android.location.
         mapView.onSaveInstanceState(outState);
     }
 
+    //METHODS OF LOCATION LISTENER
     @Override
     public void onLocationChanged(Location location) {
         Snackbar.make(mainContainer, "Latitude: " + location.getLatitude() + " Longitude: " + location.getLongitude(), Snackbar.LENGTH_LONG).show();
@@ -209,22 +273,6 @@ public class MainActivity extends AppCompatActivity implements android.location.
     @Override
     public void onProviderDisabled(String provider) {
         Snackbar.make(mainContainer, "GPS OFF", Snackbar.LENGTH_LONG).setAction("Action", null).show();
-    }
-
-    @Override
-    public void onMapClick(@NonNull LatLng point) {
-        this.mainMapBoxMap.addMarker(new MarkerOptions()
-                .position(new LatLng(location.getLatitude(), location.getLongitude()))
-                .title("New position!")
-                .snippet("Latitude: " + point.getAltitude() + " Longitude: " + point.getLongitude())
-                .icon(getCustomIcon(R.mipmap.pin)));
-    }
-
-    private Icon getCustomIcon(int icon_drawable){
-        IconFactory iconFactory = IconFactory.getInstance(this);
-        Drawable iconDrawable = ContextCompat.getDrawable(this, icon_drawable);
-        Icon icon = iconFactory.fromDrawable(iconDrawable);
-        return icon;
     }
 
 }

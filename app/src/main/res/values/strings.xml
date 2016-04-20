@@ -4,4 +4,6 @@
     <string name="accessTokenMapBox">pk.eyJ1IjoibW9pc2VzMDciLCJhIjoiY2luMjNjZWMzMGI5MnY3a2tkZ25udHJoMCJ9.SSZYVKUPTtwPZmolPq0xNw</string>
     <string name="current_location">Current location</string>
     <string name="search">Search</string>
+    <string name="wanted_find">He wanted to find</string>
+    <string name="not_found_data">Not found data</string>
 </resources>
