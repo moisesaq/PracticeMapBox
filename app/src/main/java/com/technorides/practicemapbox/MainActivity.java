@@ -31,7 +31,6 @@ import android.widget.FrameLayout;
 import android.widget.Toast;
 
 import com.mapbox.geocoder.android.AndroidGeocoder;
-import com.mapbox.geocoder.service.models.GeocoderFeature;
 import com.mapbox.mapboxsdk.annotations.Icon;
 import com.mapbox.mapboxsdk.annotations.IconFactory;
 import com.mapbox.mapboxsdk.annotations.Marker;
@@ -75,34 +74,40 @@ public class MainActivity extends AppCompatActivity implements android.location.
         toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         setup();
-        mapView.onCreate(savedInstanceState);
-        mapView.getMapAsync(new OnMapReadyCallback() {
-            @Override
-            public void onMapReady(MapboxMap mapboxMap) {
-                // Set map style
-                mainMapBoxMap = mapboxMap;
-                //mainMapBoxMap.setOnMapClickListener(MainActivity.this);
-                mainMapBoxMap.setOnMapLongClickListener(MainActivity.this);
-                mainMapBoxMap.setOnMarkerClickListener(MainActivity.this);
-                mapboxMap.setStyleUrl(Style.DARK);
+        try{
+            mapView.onCreate(savedInstanceState);
+            mapView.getMapAsync(new OnMapReadyCallback() {
+                @Override
+                public void onMapReady(MapboxMap mapboxMap) {
+                    // Set map style
+                    mainMapBoxMap = mapboxMap;
+                    //mainMapBoxMap.setOnMapClickListener(MainActivity.this);
+                    mainMapBoxMap.setOnMapLongClickListener(MainActivity.this);
+                    mainMapBoxMap.setOnMarkerClickListener(MainActivity.this);
+                    mapboxMap.setStyleUrl(Style.DARK);
 
-                // Set the camera's starting position
+                    // Set the camera's starting position
 
-                CameraPosition cameraPosition = new CameraPosition.Builder()
-                        .target(new LatLng(latitudeDefault, longitudeDefault)) // set the camera's center position
-                        .zoom(12)  // set the camera's zoom level
-                        .tilt(45)  // set the camera's tilt
-                        .build();
+                    CameraPosition cameraPosition = new CameraPosition.Builder()
+                            .target(new LatLng(latitudeDefault, longitudeDefault)) // set the camera's center position
+                            .zoom(12)  // set the camera's zoom level
+                            .tilt(45)  // set the camera's tilt
+                            .build();
 
-                // Move the camera to that position
-                mapboxMap.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+                    // Move the camera to that position
+                    mapboxMap.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
 
-                mapboxMap.addMarker(new MarkerOptions()
-                        .position(new LatLng(latitudeDefault, longitudeDefault))
-                        .title("Hello World!")
-                        .snippet("Welcome Technorides"));
-            }
-        });
+                    mapboxMap.addMarker(new MarkerOptions()
+                            .position(new LatLng(latitudeDefault, longitudeDefault))
+                            .title("Hello World!")
+                            .snippet("Welcome Technorides"));
+                }
+            });
+            return;
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+
 
         setupFloating();
 
@@ -129,7 +134,7 @@ public class MainActivity extends AppCompatActivity implements android.location.
     @Override
     public void onClick(View v){
         if(btnSearch.getId() == v.getId()){
-            searchAddress(actvSearchDirection.getText().toString());
+            getAddressWithText(actvSearchDirection.getText().toString());
         }
     }
 
@@ -220,11 +225,11 @@ public class MainActivity extends AppCompatActivity implements android.location.
 
     }
 
-    private void searchAddress(String textAddress){
-        List<Address> addressList = null;
+    private void getAddressWithText(String textAddress){
+        List<Address> addressList;
         double latitude = latitudeDefault;
         double longitude = longitudeDefault;
-        if(location == null){
+        if(location != null){
             latitude = location.getLatitude();
             longitude = location.getLongitude();
         }
@@ -245,23 +250,25 @@ public class MainActivity extends AppCompatActivity implements android.location.
         }
     }
 
-    private void searchCurrentDirection(){
+    private Address getAddressWithLatLng(double latitude, double longitude){
         Address address = null;
+        try{
+            Geocoder geocoder = new Geocoder(getApplicationContext(), Locale.getDefault());
+            address = geocoder.getFromLocation(latitude, longitude, 1).get(0);
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+        return address;
+    }
+
+    private void searchCurrentDirection(){
         double latitude = latitudeDefault;
         double longitude = longitudeDefault;
         if(location != null){
             latitude = location.getLatitude();
             longitude = location.getLongitude();
         }
-        Geocoder geocoder = new Geocoder(getApplicationContext(), Locale.getDefault());
-        //geocoder.setAccessToken(MAPBOX_ACCESS_TOKEN);
-        try{
-            address = geocoder.getFromLocation(latitude, longitude, 1).get(0);
-            showCurrentDirection(address);
-            //addressList = geocoder.getFromLocation(latitude, longitude, 100);
-        }catch (Exception e){
-            e.printStackTrace();
-        }
+        showCurrentDirection(getAddressWithLatLng(latitude, longitude));
     }
 
     private void showCurrentDirection(Address address){
@@ -305,16 +312,12 @@ public class MainActivity extends AppCompatActivity implements android.location.
     @Override
     public void onMapLongClick(@NonNull LatLng point) {
         try{
-            if(point != null){
-                if(originMarkerOptions == null){
-                    createOriginMarker(point);
-                    this.mainMapBoxMap.addMarker(originMarkerOptions);
-                }else if(destinationMarkerOptions == null){
-                    createDestinationMarker(point);
-                    this.mainMapBoxMap.addMarker(destinationMarkerOptions);
-                }
-            }else{
-                Toast.makeText(MainActivity.this, "Again", Toast.LENGTH_SHORT).show();
+            if(originMarkerOptions == null){
+                createOriginMarker(point);
+                this.mainMapBoxMap.addMarker(originMarkerOptions);
+            }else if(destinationMarkerOptions == null){
+                createDestinationMarker(point);
+                this.mainMapBoxMap.addMarker(destinationMarkerOptions);
             }
         }catch (Exception e){
             e.printStackTrace();
@@ -325,18 +328,20 @@ public class MainActivity extends AppCompatActivity implements android.location.
         originMarkerOptions = new MarkerOptions();
         originMarkerOptions.position(point);
         originMarkerOptions.title("Origin");
-        originMarkerOptions.snippet("Latitude: " + point.getLatitude() + " Longitude: " + point.getLongitude());
+        //originMarkerOptions.snippet("Latitude: " + point.getLatitude() + " Longitude: " + point.getLongitude());
+        originMarkerOptions.snippet(getAddressWithLatLng(point.getLatitude(), point.getLongitude()).toString());
         originMarkerOptions.icon(getCustomIcon(R.mipmap.marker_origin));
 
         originMarker = originMarkerOptions.getMarker();
         originMarker.setId(ID_ORIGIN_MARKER);
     }
 
-    private void createDestinationMarker(LatLng point){
+    private void createDestinationMarker(LatLng point) {
         destinationMarkerOptions = new MarkerOptions();
         destinationMarkerOptions.position(point);
         destinationMarkerOptions.title("Destination");
-        destinationMarkerOptions.snippet("Latitude: " + point.getLatitude() + " Longitude: " + point.getLongitude());
+        //destinationMarkerOptions.snippet("Latitude: " + point.getLatitude() + " Longitude: " + point.getLongitude());
+        destinationMarkerOptions.snippet(getAddressWithLatLng(point.getLatitude(), point.getLongitude()).toString());
         destinationMarkerOptions.icon(getCustomIcon(R.mipmap.marker_destination));
 
         destinationMarker = destinationMarkerOptions.getMarker();
@@ -367,8 +372,7 @@ public class MainActivity extends AppCompatActivity implements android.location.
         @Override
         protected List<Address> doInBackground(String... params) {
             String txtAddress = params[0];
-            List<Address> list = searchAddress(txtAddress);
-            return list;
+            return searchAddress(txtAddress);
         }
 
         @Override
@@ -389,7 +393,7 @@ public class MainActivity extends AppCompatActivity implements android.location.
             List<Address> addressList = null;
             double latitude = latitudeDefault;
             double longitude = longitudeDefault;
-            if(location == null){
+            if(location != null){
                 latitude = location.getLatitude();
                 longitude = location.getLongitude();
             }
@@ -401,10 +405,9 @@ public class MainActivity extends AppCompatActivity implements android.location.
             AndroidGeocoder geocoder = new AndroidGeocoder(getApplicationContext(), Locale.getDefault());
             geocoder.setAccessToken(MAPBOX_ACCESS_TOKEN);
             try{
-                //addressList = geocoder.getFromLocationName(textAddress, 100, lLat, lLong, rLat, rLong);
-                //addressList = geocoder.getFromLocationName(textAddress, 100, latitude, longitude, latitude, longitude);
+                addressList = geocoder.getFromLocationName(textAddress, 100, lLat, lLong, rLat, rLong);
                 //listAddresses = gc.getFromLocationName(textSpoken, 100, lLat, lLong, rLat, rLong);
-                addressList = geocoder.getFromLocationName(textAddress, 100);
+                //addressList = geocoder.getFromLocationName(textAddress, 100);
                 //addressList = geocoder.getFromLocation(latitude, longitude, 100);
             }catch (Exception e){
                 e.printStackTrace();
@@ -426,8 +429,7 @@ public class MainActivity extends AppCompatActivity implements android.location.
         }
         @Override
         protected Address doInBackground(Void... params) {
-            Address address = searchDirection();
-            return address;
+            return searchDirection();
         }
 
         @Override
@@ -465,8 +467,7 @@ public class MainActivity extends AppCompatActivity implements android.location.
     private Icon getCustomIcon(int icon_drawable){
         IconFactory iconFactory = IconFactory.getInstance(this);
         Drawable iconDrawable = ContextCompat.getDrawable(this, icon_drawable);
-        Icon icon = iconFactory.fromDrawable(iconDrawable);
-        return icon;
+        return iconFactory.fromDrawable(iconDrawable);
     }
 
     @Override
