@@ -12,22 +12,39 @@
         app:showAsAction="ifRoom|collapseActionView"/>
 
     <item
+        android:id="@+id/action_draw_route"
+        android:title="@string/app_name"
+        android:orderInCategory="3"
+        android:icon="@mipmap/ic_route"
+        app:showAsAction="ifRoom|withText"
+        android:visible="false"/>
+
+    <item
+        android:id="@+id/action_remove_markers"
+        android:title="@string/remove"
+        android:orderInCategory="2"
+        android:icon="@mipmap/ic_remove"
+        app:showAsAction="ifRoom|withText"
+        android:visible="false"/>
+
+    <item
         android:id="@+id/action_current_location"
         android:title="@string/current_location"
-        android:orderInCategory="2"
+        android:orderInCategory="4"
         app:showAsAction="never"/>
 
     <item
         android:id="@+id/action_current_direction"
         android:title="@string/search_current_direction"
-        android:orderInCategory="3"
+        android:orderInCategory="5"
         app:showAsAction="never"/>
 
+
+
     <item
-        android:id="@+id/action_remove_markers"
-        android:title="@string/remove"
-        android:orderInCategory="4"
-        android:icon="@mipmap/ic_delete"
-        app:showAsAction="ifRoom|withText"/>
+        android:id="@+id/action_change_style"
+        android:title="@string/change_style"
+        android:orderInCategory="6"
+        app:showAsAction="never"/>
 
 </menu>

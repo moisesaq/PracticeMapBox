@@ -6,6 +6,7 @@ import android.app.ProgressDialog;
 import android.app.SearchManager;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.location.Address;
 import android.location.Geocoder;
@@ -13,6 +14,7 @@ import android.location.Location;
 import android.location.LocationManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
@@ -22,19 +24,27 @@ import android.support.v4.view.MenuItemCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.SearchView;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.animation.BounceInterpolator;
 import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.Toast;
 
+import com.mapbox.directions.DirectionsCriteria;
+import com.mapbox.directions.MapboxDirections;
+import com.mapbox.directions.service.models.DirectionsResponse;
+import com.mapbox.directions.service.models.DirectionsRoute;
+import com.mapbox.directions.service.models.Waypoint;
 import com.mapbox.geocoder.android.AndroidGeocoder;
 import com.mapbox.mapboxsdk.annotations.Icon;
 import com.mapbox.mapboxsdk.annotations.IconFactory;
 import com.mapbox.mapboxsdk.annotations.Marker;
 import com.mapbox.mapboxsdk.annotations.MarkerOptions;
+import com.mapbox.mapboxsdk.annotations.PolylineOptions;
 import com.mapbox.mapboxsdk.camera.CameraPosition;
 import com.mapbox.mapboxsdk.camera.CameraUpdateFactory;
 import com.mapbox.mapboxsdk.constants.Style;
@@ -43,8 +53,12 @@ import com.mapbox.mapboxsdk.maps.MapView;
 import com.mapbox.mapboxsdk.maps.MapboxMap;
 import com.mapbox.mapboxsdk.maps.OnMapReadyCallback;
 
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+
+import retrofit.Response;
 
 public class MainActivity extends AppCompatActivity implements android.location.LocationListener, MapboxMap.OnMapClickListener,
                                                                     View.OnClickListener, MapboxMap.OnMapLongClickListener, MapboxMap.OnMarkerClickListener{
@@ -66,6 +80,7 @@ public class MainActivity extends AppCompatActivity implements android.location.
     public static long ID_DESTINATION_MARKER = 2000;
     private Marker originMarker, destinationMarker;
     private MarkerOptions originMarkerOptions, destinationMarkerOptions;
+    private MenuItem searchItem, removeMarkersItem, drawRouteItem;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -84,8 +99,7 @@ public class MainActivity extends AppCompatActivity implements android.location.
                     //mainMapBoxMap.setOnMapClickListener(MainActivity.this);
                     mainMapBoxMap.setOnMapLongClickListener(MainActivity.this);
                     mainMapBoxMap.setOnMarkerClickListener(MainActivity.this);
-                    mapboxMap.setStyleUrl(Style.DARK);
-
+                    mainMapBoxMap.setStyleUrl(Style.DARK);
                     // Set the camera's starting position
 
                     CameraPosition cameraPosition = new CameraPosition.Builder()
@@ -152,7 +166,10 @@ public class MainActivity extends AppCompatActivity implements android.location.
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_main, menu);
-        MenuItem searchItem = menu.findItem(R.id.action_search);
+        searchItem = menu.findItem(R.id.action_search);
+        removeMarkersItem = menu.findItem(R.id.action_remove_markers);
+        drawRouteItem = menu.findItem(R.id.action_draw_route);
+
         SearchManager searchManager = (SearchManager)getSystemService(Context.SEARCH_SERVICE);
         SearchView searchView = (SearchView)MenuItemCompat.getActionView(searchItem);
         if(searchView != null){
@@ -161,8 +178,8 @@ public class MainActivity extends AppCompatActivity implements android.location.
                 @Override
                 public boolean onQueryTextSubmit(String query) {
                     Toast.makeText(getApplicationContext(), "Searching " + query, Toast.LENGTH_LONG).show();
-                    //searchAddress(query);
-                    new SearchAddress().execute(query);
+                    getAddressWithText(query);
+                    //new SearchAddress().execute(query);
                     return false;
                 }
 
@@ -179,6 +196,14 @@ public class MainActivity extends AppCompatActivity implements android.location.
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
         switch (id){
+            case R.id.action_draw_route:
+                if(originMarker != null && destinationMarker != null)
+                    searchRoute(new Waypoint(originMarker.getPosition().getLatitude(), originMarker.getPosition().getLongitude()),
+                            new Waypoint(destinationMarker.getPosition().getLatitude(), destinationMarker.getPosition().getLongitude()));
+                return true;
+            case R.id.action_remove_markers:
+                removeMarkers();
+                return true;
             case R.id.action_current_location:
                 showCurrentLocation();
                 return true;
@@ -186,8 +211,8 @@ public class MainActivity extends AppCompatActivity implements android.location.
                 //new SearchDirection().execute();
                 searchCurrentDirection();
                 return true;
-            case R.id.action_remove_markers:
-                removeMarkers();
+            case R.id.action_change_style:
+                mainMapBoxMap.setStyle(Style.MAPBOX_STREETS);
                 return true;
         }
         return super.onOptionsItemSelected(item);
@@ -283,7 +308,7 @@ public class MainActivity extends AppCompatActivity implements android.location.
             result += address.getCountryName() + " - ";
         if(address.getAddressLine(0) != null)
             result += address.getAddressLine(0);*/
-        dialog.setMessage(address.toString());
+        dialog.setMessage(getTextAddress(address));
         dialog.create().show();
     }
 
@@ -307,6 +332,10 @@ public class MainActivity extends AppCompatActivity implements android.location.
 
         destinationMarker = null;
         destinationMarkerOptions = null;
+
+        searchItem.setVisible(true);
+        drawRouteItem.setVisible(false);
+        removeMarkersItem.setVisible(false);
     }
 
     @Override
@@ -315,13 +344,26 @@ public class MainActivity extends AppCompatActivity implements android.location.
             if(originMarkerOptions == null){
                 createOriginMarker(point);
                 this.mainMapBoxMap.addMarker(originMarkerOptions);
+                removeMarkersItem.setVisible(true);
             }else if(destinationMarkerOptions == null){
                 createDestinationMarker(point);
                 this.mainMapBoxMap.addMarker(destinationMarkerOptions);
+                searchItem.setVisible(false);
+                drawRouteItem.setVisible(true);
             }
         }catch (Exception e){
             e.printStackTrace();
         }
+    }
+
+
+    private StringBuilder getTextAddress(Address address){
+        StringBuilder stringBuilder = new StringBuilder();
+        if(address.getAddressLine(0) != null && !address.getAddressLine(0).isEmpty())
+            stringBuilder.append(address.getAddressLine(0)).append(", ");
+        if(address.getLocality() != null && !address.getLocality().isEmpty())
+            stringBuilder.append(address.getLocality());
+        return stringBuilder;
     }
 
     private void createOriginMarker(LatLng point){
@@ -329,7 +371,8 @@ public class MainActivity extends AppCompatActivity implements android.location.
         originMarkerOptions.position(point);
         originMarkerOptions.title("Origin");
         //originMarkerOptions.snippet("Latitude: " + point.getLatitude() + " Longitude: " + point.getLongitude());
-        originMarkerOptions.snippet(getAddressWithLatLng(point.getLatitude(), point.getLongitude()).toString());
+        Address originAddress = getAddressWithLatLng(point.getLatitude(), point.getLongitude());
+        originMarkerOptions.snippet(getTextAddress(originAddress).toString());
         originMarkerOptions.icon(getCustomIcon(R.mipmap.marker_origin));
 
         originMarker = originMarkerOptions.getMarker();
@@ -341,7 +384,8 @@ public class MainActivity extends AppCompatActivity implements android.location.
         destinationMarkerOptions.position(point);
         destinationMarkerOptions.title("Destination");
         //destinationMarkerOptions.snippet("Latitude: " + point.getLatitude() + " Longitude: " + point.getLongitude());
-        destinationMarkerOptions.snippet(getAddressWithLatLng(point.getLatitude(), point.getLongitude()).toString());
+        Address destinationAddress = getAddressWithLatLng(point.getLatitude(), point.getLongitude());
+        destinationMarkerOptions.snippet(getTextAddress(destinationAddress).toString());
         destinationMarkerOptions.icon(getCustomIcon(R.mipmap.marker_destination));
 
         destinationMarker = destinationMarkerOptions.getMarker();
@@ -357,6 +401,125 @@ public class MainActivity extends AppCompatActivity implements android.location.
         }
         return false;
     }
+
+    @Override
+    public void onResume(){
+        super.onResume();
+        mapView.onResume();
+    }
+
+    @Override
+    public void onPause(){
+        super.onPause();
+        mapView.onPause();
+    }
+
+    @Override
+    public void onLowMemory(){
+        super.onLowMemory();
+        mapView.onLowMemory();
+    }
+
+    @Override
+    public void onDestroy(){
+        super.onDestroy();
+        mapView.onDestroy();
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState){
+        super.onSaveInstanceState(outState);
+        mapView.onSaveInstanceState(outState);
+    }
+
+    //METHODS OF LOCATION LISTENER
+    @Override
+    public void onLocationChanged(Location location) {
+        Snackbar.make(mainContainer, "Latitude: " + location.getLatitude() + " Longitude: " + location.getLongitude(), Snackbar.LENGTH_LONG).show();
+    }
+
+    @Override
+    public void onStatusChanged(String provider, int status, Bundle extras) {
+
+    }
+
+    @Override
+    public void onProviderEnabled(String provider) {
+        Snackbar.make(mainContainer, "GPS ON", Snackbar.LENGTH_LONG).setAction("Action", null).show();
+    }
+
+    @Override
+    public void onProviderDisabled(String provider) {
+        Snackbar.make(mainContainer, "GPS OFF", Snackbar.LENGTH_LONG).setAction("Action", null).show();
+    }
+
+
+    private void searchRoute(Waypoint origin, Waypoint destination){
+        try{
+            final MapboxDirections client = new MapboxDirections.Builder()
+                    .setAccessToken(MAPBOX_ACCESS_TOKEN)
+                    .setOrigin(origin)
+                    .setDestination(destination)
+                    .setProfile(DirectionsCriteria.PROFILE_DRIVING)
+                    .build();
+            //Response<DirectionsResponse> response = client.execute();
+            new AsyncTask<Void, Void, Response<DirectionsResponse>>(){
+                @Override
+                protected void onPreExecute(){
+                    super.onPreExecute();
+                    Toast.makeText(getApplicationContext(), "Searching", Toast.LENGTH_SHORT).show();
+                }
+                @Override
+                protected Response<DirectionsResponse> doInBackground(Void... params) {
+                    Response<DirectionsResponse> response = null;
+                    try{
+                        response = client.execute();
+                    }catch (IOException e){
+                        e.printStackTrace();
+                    }
+                    return response;
+                }
+
+                @Override
+                protected void onPostExecute(Response<DirectionsResponse> response){
+                    if(response != null){
+                        DirectionsRoute route = response.body().getRoutes().get(0);
+                        Log.d("DATE ROUTE ", " DISTANCE>>>> " + route.getDistance() / 1000 + "Km. TIME>>>> " + route.getDuration());
+                        drawRoute(route);
+                    }
+                }
+            }.execute();
+            /*DirectionsRoute route = response.body().getRoutes().get(0);
+            Log.d("DATE ROUTE ", " DISTANCE>>>> " +route.getDistance()/1000 + "Km. TIME>>>> " + route.getDuration());
+            drawRoute(route);*/
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+
+    private void drawRoute(DirectionsRoute route){
+        try{
+            List<Waypoint> listWayPoints = route.getGeometry().getWaypoints();
+            LatLng[] points = new LatLng[listWayPoints.size()];
+            for (int i = 0; i < points.length; i++){
+                points[i] = new LatLng(listWayPoints.get(i).getLatitude(), listWayPoints.get(i).getLongitude());
+            }
+            mainMapBoxMap.addPolyline(new PolylineOptions()
+                    .add(points)
+                    .color(Color.parseColor("#3887be"))//R.color.colorAccent)
+                    .width(5));
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+    }
+
+    private Icon getCustomIcon(int icon_drawable){
+        IconFactory iconFactory = IconFactory.getInstance(this);
+        Drawable iconDrawable = ContextCompat.getDrawable(this, icon_drawable);
+        return iconFactory.fromDrawable(iconDrawable);
+    }
+
+    //--------------------------SEARCHER OF MAPBOX GEOCODER------------------------
 
     public class SearchAddress extends AsyncTask<String, Void, List<Address>>{
         ProgressDialog pd;
@@ -462,63 +625,6 @@ public class MainActivity extends AppCompatActivity implements android.location.
             }
             return address;
         }
-    }
-
-    private Icon getCustomIcon(int icon_drawable){
-        IconFactory iconFactory = IconFactory.getInstance(this);
-        Drawable iconDrawable = ContextCompat.getDrawable(this, icon_drawable);
-        return iconFactory.fromDrawable(iconDrawable);
-    }
-
-    @Override
-    public void onResume(){
-        super.onResume();
-        mapView.onResume();
-    }
-
-    @Override
-    public void onPause(){
-        super.onPause();
-        mapView.onPause();
-    }
-
-    @Override
-    public void onLowMemory(){
-        super.onLowMemory();
-        mapView.onLowMemory();
-    }
-
-    @Override
-    public void onDestroy(){
-        super.onDestroy();
-        mapView.onDestroy();
-    }
-
-    @Override
-    protected void onSaveInstanceState(Bundle outState){
-        super.onSaveInstanceState(outState);
-        mapView.onSaveInstanceState(outState);
-    }
-
-    //METHODS OF LOCATION LISTENER
-    @Override
-    public void onLocationChanged(Location location) {
-        Snackbar.make(mainContainer, "Latitude: " + location.getLatitude() + " Longitude: " + location.getLongitude(), Snackbar.LENGTH_LONG).show();
-    }
-
-    @Override
-    public void onStatusChanged(String provider, int status, Bundle extras) {
-
-    }
-
-    @Override
-    public void onProviderEnabled(String provider) {
-        Snackbar.make(mainContainer, "GPS ON", Snackbar.LENGTH_LONG).setAction("Action", null).show();
-    }
-
-    @Override
-    public void onProviderDisabled(String provider) {
-        Snackbar.make(mainContainer, "GPS OFF", Snackbar.LENGTH_LONG).setAction("Action", null).show();
     }
 
 }

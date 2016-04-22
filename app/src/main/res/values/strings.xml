@@ -12,4 +12,5 @@
     <string name="you_are">You are in...</string>
     <string name="search_current_direction">Search current direction</string>
     <string name="remove">Remove</string>
+    <string name="change_style">Change style</string>
 </resources>
